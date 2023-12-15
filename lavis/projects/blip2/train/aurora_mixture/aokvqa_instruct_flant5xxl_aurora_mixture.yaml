@@ -1,0 +1,68 @@
+model:
+  arch: blip2_t5_instruct_aurora_moe
+  model_type: flant5xxl
+  load_finetuned: False
+  use_grad_checkpoint: True
+  freeze_vit: True
+
+  # for OKVQA evaluation
+  # apply_lemmatizer: True
+
+datasets:
+  aok_vqa_instruct: 
+    vis_processor:
+        train:
+          name: "blip_image_train"
+          image_size: 224
+        eval:
+          name: "blip_image_eval"
+          image_size: 224
+    text_processor:
+        train:
+          name: "blip_question"
+        eval:
+          name: "blip_question"
+
+run:
+  task: aok_vqa
+  train_mode: adapter
+  lr_sched: "linear_warmup_cosine_lr"
+    # config 1
+  init_lr: 2e-5
+  min_lr: 1e-6
+  weight_decay: 0.02
+
+  # config 2
+  # init_lr: 1e-8
+  # min_lr: 0
+  # weight_decay: 0.05
+  
+  max_epoch: 5
+  batch_size_train: 16
+  batch_size_eval: 32
+  num_workers: 4
+  accum_grad_iters: 1
+
+  # inference-specific
+  max_len: 100
+  min_len: 1
+  num_beams: 5
+  inference_method: "generate"
+  # prompt: "Question: {} Short answer:"
+
+  seed: 42
+  output_dir: "Output/aurora_moe/aokvqa"
+
+  # evaluate: False
+  evaluate: False
+  train_splits: ["train"]
+  # valid_splits: ["val"]
+  valid_splits: ["test"]
+  # test_splits: ["test"]
+  # test_splits: ["val"]
+
+  # distribution-specific
+  device: "cuda"
+  world_size: 1
+  dist_url: "env://"
+  distributed: True
