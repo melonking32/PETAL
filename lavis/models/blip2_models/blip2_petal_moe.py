@@ -20,15 +20,20 @@ from lavis.common.dist_utils import download_cached_file
 from lavis.common.utils import is_url
 from lavis.common.logger import MetricLogger
 from lavis.models.base_model import BaseModel
-from lavis.models.blip2_models.Qformer_Lora import BertConfig, BertLMHeadModel
+# from lavis.models.blip2_models.Qformer import BertConfig, BertLMHeadModel
+# from lavis.models.blip2_models.Qformer_Lora2 import BertConfig, BertLMHeadModel
+# from lavis.models.blip2_models.Qformer_Adapter import BertConfig, BertLMHeadModel
+from lavis.models.blip2_models.Qformer_PETAL_MOE import BertConfig, BertLMHeadModel
 from lavis.models.eva_vit import create_eva_vit_g
 from lavis.models.clip_vit import create_clip_vit_L
 from transformers import BertTokenizer
 
 
-class Blip2Lora(BaseModel):
+class Blip2Aurora_MOE(BaseModel):
     @classmethod
     def init_tokenizer(cls, truncation_side="right"):
+        # tokenizer = BertTokenizer.from_pretrained("bert-base-uncased", truncation_side=truncation_side)
+        # "/root/paddlejob/workspace/zhaiyihang/Project/Checkpoint/bert-base-uncased"
         tokenizer = BertTokenizer.from_pretrained("/root/paddlejob/workspace/zhaiyihang/Project/Checkpoint/bert-base-uncased", truncation_side=truncation_side)
         tokenizer.add_special_tokens({"bos_token": "[DEC]"})
         return tokenizer
@@ -45,6 +50,7 @@ class Blip2Lora(BaseModel):
 
     @classmethod
     def init_Qformer(cls, num_query_token, vision_width, cross_attention_freq=2):
+        # encoder_config = BertConfig.from_pretrained("bert-base-uncased")
         encoder_config = BertConfig.from_pretrained("/root/paddlejob/workspace/zhaiyihang/Project/Checkpoint/bert-base-uncased")
         encoder_config.encoder_width = vision_width
         # insert cross-attention layer every other block

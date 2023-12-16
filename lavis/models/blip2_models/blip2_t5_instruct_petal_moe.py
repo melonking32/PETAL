@@ -16,13 +16,14 @@ from transformers import T5TokenizerFast
 
 from lavis.common.registry import registry
 # from lavis.models.blip2_models.blip2 import Blip2Base, disabled_train
-from lavis.models.blip2_models.blip2_aurora import Blip2Aurora, disabled_train
+from lavis.models.blip2_models.blip2_petal_moe import Blip2Aurora_MOE, disabled_train
 from lavis.models.blip2_models.modeling_t5 import T5Config, T5ForConditionalGeneration
 from transformers.modeling_outputs import BaseModelOutput
 
 
-@registry.register_model("blip2_t5_instruct_aurora_mixture")
-class Blip2T5InstructAurora_Mixture(Blip2Aurora):
+@registry.register_model("blip2_t5_instruct_aurora_moe")
+# class Blip2T5InstructAurora(Blip2Base):
+class Blip2T5InstructAurora_MOE(Blip2Aurora_MOE):
     """
     BLIP2 T5 model.
     Supported model types:
@@ -115,7 +116,7 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
         self.few_shot_prob = few_shot_prob
 
         self.qformer_text_input = qformer_text_input
-        
+
         self.R=64
         # self.R=128
         
@@ -131,49 +132,33 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
         # self.CP_C_Image=self.CP_C
         nn.init.zeros_(self.CP_V_Image.weight)
         nn.init.xavier_uniform_(self.CP_C_Image)
-        # self.soft_instruct1=torch.randint(0,10000, (1, 32))
-        self.soft_instruct1=torch.tensor([[1,2,3,4,5,6]])
-        
-        
-    def get_query_embedding(self,Instruct,image):
+
+    def forward(self, samples):
+        # print('-----------------')
+        # print(samples["text_input"])
+        # print(samples["text_output"])
+        # print('-----------------')
+
+        image = samples["image"]
         with self.maybe_autocast():
             image_embeds = self.ln_vision(self.visual_encoder(image))
         image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(image.device)
-        
-        input_ids=self.soft_instruct1.expand(image_embeds.shape[0],-1).to(image.device)
-        q_attn_mask=torch.ones(input_ids.size(), dtype=torch.long).to(image.device)
-        
+
         query_tokens = self.query_tokens.expand(image_embeds.shape[0], -1, -1)
+        # print(len(self.tokenizer))
         if self.qformer_text_input:
             text_Qformer = self.tokenizer(
-                # samples["text_input"],
-                Instruct,
+                samples["text_input"],
                 padding='longest',
                 truncation=True,
                 max_length=self.max_txt_len,
                 return_tensors="pt",
             ).to(image.device)
             query_atts = torch.ones(query_tokens.size()[:-1], dtype=torch.long).to(image.device)
-            # Qformer_atts = torch.cat([query_atts,text_Qformer.attention_mask],dim=1)
-            Qformer_atts = torch.cat([query_atts,q_attn_mask],dim=1)
+            Qformer_atts = torch.cat([query_atts,text_Qformer.attention_mask],dim=1)
 
-            # query_output = self.Qformer.bert(
-            #     text_Qformer.input_ids,
-            #     attention_mask=Qformer_atts,
-            #     query_embeds=query_tokens,
-            #     encoder_hidden_states=image_embeds,
-            #     encoder_attention_mask=image_atts,
-            #     return_dict=True,
-            #     mode = 'multimodal',
-            #     CP_U=self.CP_U, 
-            #     CP_V=self.CP_V, 
-            #     CP_C=self.CP_C,
-            #     CP_U_Image=self.CP_U_Image, 
-            #     CP_V_Image=self.CP_V_Image, 
-            #     CP_C_Image=self.CP_C_Image,
-            # )
             query_output = self.Qformer.bert(
-                input_ids,
+                text_Qformer.input_ids,
                 attention_mask=Qformer_atts,
                 query_embeds=query_tokens,
                 encoder_hidden_states=image_embeds,
@@ -186,6 +171,7 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
                 CP_U_Image=self.CP_U_Image, 
                 CP_V_Image=self.CP_V_Image, 
                 CP_C_Image=self.CP_C_Image,
+                
             )
         else:
             query_output = self.Qformer.bert(
@@ -204,38 +190,7 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
 
         inputs_t5 = self.t5_proj(query_output.last_hidden_state[:,:query_tokens.size(1),:])
         atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long).to(image.device)
-        return inputs_t5,atts_t5
-    def forward(self, samples):
-        # print('-----------------')
-        # print(samples["text_input"])
-        # print(samples["text_output"])
-        # print('-----------------')
 
-        image = samples["image"]
-        inputs_t5_1,atts_t5=self.get_query_embedding(samples['Instruct_1'],image)
-        inputs_t5_2,_ =self.get_query_embedding(samples['Instruct_2'],image)
-        inputs_t5_3,_ =self.get_query_embedding(samples['Instruct_3'],image)
-        
-        assert inputs_t5_1.size()==inputs_t5_2.size()==inputs_t5_3.size()
-        
-        inputs_t5=0.33*inputs_t5_1+0.33*inputs_t5_2+0.34*inputs_t5_3
-        
-        # from torch.nn.functional import softmax
-        # import torch
-        # # print(inputs_t5_1)
-        # # print(inputs_t5_2)
-        # # print(torch.bmm(inputs_t5_1/64,inputs_t5_2.transpose(-1,-2)))
-        # attn_scores_1=softmax(torch.bmm(inputs_t5_1/4096,inputs_t5_2.transpose(-1,-2)),dim=-1)
-                              
-        # attn_scores_2=softmax(torch.bmm(inputs_t5_1/4096,inputs_t5_3.transpose(-1,-2)),dim=-1)    
-        # inputs_t5=(inputs_t5_1+torch.bmm(attn_scores_1,inputs_t5_2)+torch.bmm(attn_scores_2,inputs_t5_3))/3
-
-        
-        # inputs_t5=torch.bmm(attn_scores_1,inputs_t5_2)
-        # print(inputs_t5.shape)
-        # print(inputs_t5)
-        # inputs_t5=0.6*inputs_t5_1+0.2*inputs_t5_2+0.2*inputs_t5_3
-        
         fs_embeds, fs_atts = None, None
         if self.few_shot_prob > 0 and "few_shot_samples" in samples.keys():
             fs_embeds, fs_atts = self.prepare_few_shot_embeds(samples['few_shot_samples'])
@@ -262,8 +217,12 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
                 output_tokens.input_ids == self.t5_tokenizer.pad_token_id, -100
             )
             
-
-
+            # print('output_tokens: ',output_tokens.input_ids.shape)
+            # print('image_embeds: ',image_embeds.shape)
+            # print('query_output: ',query_output.last_hidden_state[:,:query_tokens.size(1),:].shape)
+            # print('inputs_t5: ',inputs_t5.shape)
+            # print('targets: ',targets)
+            
             inputs_embeds = self.t5_model.encoder.embed_tokens(input_tokens.input_ids)
             inputs_embeds = torch.cat([inputs_t5, inputs_embeds], dim=1)
 
@@ -325,6 +284,13 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
                 encoder_hidden_states=image_embeds,
                 encoder_attention_mask=image_atts,
                 return_dict=True,
+                mode = 'multimodal',
+                CP_U=self.CP_U, 
+                CP_V=self.CP_V, 
+                CP_C=self.CP_C,
+                CP_U_Image=self.CP_U_Image, 
+                CP_V_Image=self.CP_V_Image, 
+                CP_C_Image=self.CP_C_Image,
             )
         else:
             query_output = self.Qformer.bert(
@@ -332,6 +298,13 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
                 encoder_hidden_states=image_embeds,
                 encoder_attention_mask=image_atts,
                 return_dict=True,
+                mode = 'multimodal',
+                CP_U=self.CP_U, 
+                CP_V=self.CP_V, 
+                CP_C=self.CP_C,
+                CP_U_Image=self.CP_U_Image, 
+                CP_V_Image=self.CP_V_Image, 
+                CP_C_Image=self.CP_C_Image,
             )
 
         inputs_t5 = self.t5_proj(query_output.last_hidden_state[:,:query_tokens.size(1),:])
@@ -356,26 +329,54 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
             inputs_embeds = inputs_embeds.reshape(inputs_embeds.size(0) // this_n_fs, inputs_embeds.size(1) * this_n_fs, inputs_embeds.size(2))
 
         return inputs_embeds, encoder_atts
-        
+
     @torch.no_grad()
-    def get_instruct_embedding_generate(self,query_tokens,Instruct,image):
+    def generate(
+        self,
+        samples,
+        use_nucleus_sampling=False,
+        num_beams=5,
+        max_length=256,
+        min_length=1,
+        top_p=0.9,
+        repetition_penalty=1.5,
+        length_penalty=1.0,
+        num_captions=1,
+        temperature=1,
+    ):
+        if "prompt" in samples.keys():
+            prompt = samples["prompt"]
+        else:
+            prompt = self.prompt
+        # print('prompt',prompt)
+        image = samples["image"]
+
+        bs = image.size(0)
+
+        if isinstance(prompt, str):
+            prompt = [prompt] * bs
+        else:
+            assert len(prompt) == bs, "The number of prompts must be equal to the batch size."
+
+        # For TextCaps
+        if "ocr_tokens" in samples.keys() and "{}" in prompt[0]:
+            prompt = [p.format(', '.join(samples['ocr_tokens'][i][:30])) for i, p in enumerate(prompt)]
+
+        query_tokens = self.query_tokens.expand(bs, -1, -1)
         if self.qformer_text_input:
             # remove ocr tokens in q_former (for eval textvqa)
             # qformer_prompt = prompt
             # qformer_prompt = ['Question: ' + qp.split(' Question: ')[1] for qp in qformer_prompt]
 
             text_Qformer = self.tokenizer(
-                Instruct,
+                prompt,
                 padding='longest',
                 truncation=True,
                 max_length=self.max_txt_len,
                 return_tensors="pt",
             ).to(image.device)
             query_atts = torch.ones(query_tokens.size()[:-1], dtype=torch.long).to(image.device)
-            # Qformer_atts = torch.cat([query_atts,text_Qformer.attention_mask],dim=1)
-            # input_ids=self.soft_instruct1.expand(image_embeds.shape[0],-1).to(image.device)
-            # q_attn_mask=torch.ones(input_ids.size(), dtype=torch.long).to(image.device)
-            # Qformer_atts = torch.cat([query_atts,q_attn_mask],dim=1)
+            Qformer_atts = torch.cat([query_atts,text_Qformer.attention_mask],dim=1)
 
         # For video data
         if image.dim() == 5:
@@ -427,27 +428,10 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
             with self.maybe_autocast():
                 image_embeds = self.ln_vision(self.visual_encoder(image))
             image_atts = torch.ones(image_embeds.size()[:-1], dtype=torch.long).to(image.device)
-            input_ids=self.soft_instruct1.expand(image_embeds.shape[0],-1).to(image.device)
-            q_attn_mask=torch.ones(input_ids.size(), dtype=torch.long).to(image.device)
-            Qformer_atts = torch.cat([query_atts,q_attn_mask],dim=1)
+
             if self.qformer_text_input:
-                # query_output = self.Qformer.bert(
-                #     text_Qformer.input_ids,
-                #     attention_mask=Qformer_atts,
-                #     query_embeds=query_tokens,
-                #     encoder_hidden_states=image_embeds,
-                #     encoder_attention_mask=image_atts,
-                #     return_dict=True,
-                #     mode = 'multimodal',
-                #     CP_U=self.CP_U, 
-                #     CP_V=self.CP_V, 
-                #     CP_C=self.CP_C,
-                #     CP_U_Image=self.CP_U_Image, 
-                #     CP_V_Image=self.CP_V_Image, 
-                #     CP_C_Image=self.CP_C_Image,
-                # )
                 query_output = self.Qformer.bert(
-                    input_ids,
+                    text_Qformer.input_ids,
                     attention_mask=Qformer_atts,
                     query_embeds=query_tokens,
                     encoder_hidden_states=image_embeds,
@@ -478,60 +462,6 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
 
             inputs_t5 = self.t5_proj(query_output.last_hidden_state[:,:query_tokens.size(1),:])
             atts_t5 = torch.ones(inputs_t5.size()[:-1], dtype=torch.long).to(image.device)
-        return inputs_t5,atts_t5
-
-    
-    @torch.no_grad()
-    def generate(
-        self,
-        samples,
-        use_nucleus_sampling=False,
-        num_beams=5,
-        max_length=256,
-        min_length=1,
-        top_p=0.9,
-        repetition_penalty=1.5,
-        length_penalty=1.0,
-        num_captions=1,
-        temperature=1,
-    ):
-        if "prompt" in samples.keys():
-            prompt = samples["prompt"]
-        else:
-            prompt = self.prompt
-        # print('prompt',prompt)
-        image = samples["image"]
-
-        bs = image.size(0)
-
-        if isinstance(prompt, str):
-            prompt = [prompt] * bs
-        else:
-            assert len(prompt) == bs, "The number of prompts must be equal to the batch size."
-
-        # For TextCaps
-        if "ocr_tokens" in samples.keys() and "{}" in prompt[0]:
-            prompt = [p.format(', '.join(samples['ocr_tokens'][i][:30])) for i, p in enumerate(prompt)]
-
-        query_tokens = self.query_tokens.expand(bs, -1, -1)
-        inputs_t5_1, atts_t5=self.get_instruct_embedding_generate(query_tokens,samples['Instruct_1'],image)
-        inputs_t5_2,_ =self.get_instruct_embedding_generate(query_tokens,samples['Instruct_2'],image)
-        inputs_t5_3,_ =self.get_instruct_embedding_generate(query_tokens,samples['Instruct_3'],image)
-        
-        assert inputs_t5_1.size()==inputs_t5_2.size()==inputs_t5_3.size()
-        
-        inputs_t5=0.33*inputs_t5_1+0.33*inputs_t5_2+0.34*inputs_t5_3
-        # inputs_t5=0.6*inputs_t5_1+0.2*inputs_t5_2+0.2*inputs_t5_3
-        
-        # from torch.nn.functional import softmax
-        # import torch
-        
-        # attn_scores_1=softmax(torch.bmm(inputs_t5_1/4096,inputs_t5_2.transpose(-1,-2)))
-                              
-        # attn_scores_2=softmax(torch.bmm(inputs_t5_1/4096,inputs_t5_3.transpose(-1,-2)))
-
-        # inputs_t5=inputs_t5_1+torch.bmm(attn_scores_1,inputs_t5_2)+torch.bmm(attn_scores_2,inputs_t5_3)
-        
 
         input_tokens = self.t5_tokenizer(
             prompt,
@@ -726,6 +656,13 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
                         encoder_hidden_states=frame_embeds,
                         encoder_attention_mask=frame_atts,
                         return_dict=True,
+                        mode = 'multimodal',
+                        CP_U=self.CP_U, 
+                        CP_V=self.CP_V, 
+                        CP_C=self.CP_C,
+                        CP_U_Image=self.CP_U_Image, 
+                        CP_V_Image=self.CP_V_Image, 
+                        CP_C_Image=self.CP_C_Image,
                     )
                 else:
                     frame_query_output = self.Qformer.bert(
@@ -733,6 +670,13 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
                         encoder_hidden_states=frame_embeds,
                         encoder_attention_mask=frame_atts,
                         return_dict=True,
+                        mode = 'multimodal',
+                        CP_U=self.CP_U, 
+                        CP_V=self.CP_V, 
+                        CP_C=self.CP_C,
+                        CP_U_Image=self.CP_U_Image, 
+                        CP_V_Image=self.CP_V_Image, 
+                        CP_C_Image=self.CP_C_Image,
                     )
 
                 frame_inputs_t5 = self.t5_proj(frame_query_output.last_hidden_state[:,:query_tokens.size(1),:])
@@ -754,6 +698,13 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
                     encoder_hidden_states=image_embeds,
                     encoder_attention_mask=image_atts,
                     return_dict=True,
+                    mode = 'multimodal',
+                    CP_U=self.CP_U, 
+                    CP_V=self.CP_V, 
+                    CP_C=self.CP_C,
+                    CP_U_Image=self.CP_U_Image, 
+                    CP_V_Image=self.CP_V_Image, 
+                    CP_C_Image=self.CP_C_Image,
                 )
             else:
                 query_output = self.Qformer.bert(
@@ -761,6 +712,13 @@ class Blip2T5InstructAurora_Mixture(Blip2Aurora):
                     encoder_hidden_states=image_embeds,
                     encoder_attention_mask=image_atts,
                     return_dict=True,
+                    mode = 'multimodal',
+                    CP_U=self.CP_U, 
+                    CP_V=self.CP_V, 
+                    CP_C=self.CP_C,
+                    CP_U_Image=self.CP_U_Image, 
+                    CP_V_Image=self.CP_V_Image, 
+                    CP_C_Image=self.CP_C_Image,
                 )
 
             inputs_t5 = self.t5_proj(query_output.last_hidden_state[:,:query_tokens.size(1),:])
