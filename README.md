@@ -1,7 +1,18 @@
 # Parameter-efficient Instruction-enhanced Learning
 
 
-## lavis 
-models  datasets  task_configs
-## run_scripts
-run.sh
+## Setup
+```bash
+pip install -r requirements.txt 
+```
+
+## Training
+```bash
+cd PETAL
+bash run_scripts/blip2/train/train_aurora_mixture.sh
+```
+
+### Evaluation
+```bash
+bash run_scripts/blip2/eval/eval_aurora_mixture.sh
+```
