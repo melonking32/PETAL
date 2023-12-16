@@ -12,7 +12,7 @@ import torch.nn as nn
 import transformers
 
 from lavis.common.registry import registry
-from lavis.models.blip2_models.blip2_vicuna_moe import Blip2Aurora_MOE, disabled_train
+from lavis.models.blip2_models.blip2_petal_moe import Blip2Aurora_MOE, disabled_train
 
 @registry.register_model("blip2_vicuna_instruct_aurora_moe")
 class Blip2VicunaInstruct_Aurora_MOE(Blip2Aurora_MOE):

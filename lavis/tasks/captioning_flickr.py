@@ -13,9 +13,9 @@ from lavis.common.registry import registry
 from lavis.tasks.base_task import BaseTask
 
 import sys
-sys.path.append("/root/paddlejob/workspace/zhaiyihang/Project/LAVIS/lavis/tasks/cider")
-from cider import Cider
-from caption_metric import compute_metric
+# sys.path.append(os.path.join(sys.path[0],'cider'))
+from lavis.tasks.cider.cider import Cider
+from lavis.tasks.cider.caption_metric import compute_metric
 
 @registry.register_task("captioning_flickr")
 class Caption_flickr_Task(BaseTask):

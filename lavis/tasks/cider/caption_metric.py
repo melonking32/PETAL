@@ -1,4 +1,4 @@
-from cider import Cider
+from .cider import Cider
 from nltk.translate.bleu_score import sentence_bleu
 from nltk.translate.bleu_score import corpus_bleu
 from rouge import Rouge

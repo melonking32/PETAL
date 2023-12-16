@@ -9,9 +9,6 @@ model:
   load_pretrained: True
 
   pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/InstructBLIP/instruct_blip_flanxxl_trimmed.pth"
-  # pretrained: "https://storage.googleapis.com/sfr-vision-language-research/LAVIS/models/BLIP2/blip2_pretrained_flant5xxl.pth"
-  # finetuned: "/blob/v-yihangzhai/LAVIS/lavis/output/BLIP2/OKVQA/20230622195/checkpoint_5.pth"
-  # finetuned: '/blob/v-yihangzhai/LAVIS/lavis/output/InstructBlip/Pretrain_4qa_1coco_caption/20230704095/checkpoint_0.pth' 
 
   # vit encoder
   image_size: 224
@@ -24,9 +21,7 @@ model:
   num_query_token: 32
 
   # T5
-  # t5_model: "google/flan-t5-xxl"
-  t5_model: "/root/paddlejob/workspace/zhaiyihang/Project/Checkpoint/flan-t5-xxl"
-
+  t5_model: "google/flan-t5-xxl"
   # generation configs
   prompt: ""
 

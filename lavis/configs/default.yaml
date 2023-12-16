@@ -7,5 +7,4 @@ env:
   # For default users
   # cache_root: "cache"
   # For internal use with persistent storage
-  # cache_root: "/export/home/.cache/lavis"
-  cache_root: "/root/paddlejob/workspace/zhaiyihang/Project/Lavis_data"
+  cache_root: "/export/home/.cache/PETAL"
