@@ -1,5 +1,6 @@
 # Parameter-efficient Instruction-enhanced Learning
 
+[Paper](https://arxiv.org/abs/2312.12458) | [arXiv](https://arxiv.org/abs/2312.12458) 
 
 ## Setup
 ```bash
