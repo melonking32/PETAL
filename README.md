@@ -2,15 +2,15 @@
 
 [Paper](https://arxiv.org/abs/2312.12458) | [arXiv](https://arxiv.org/abs/2312.12458) 
 
-We propose a novel approach to utilize Parameter-Efficient Tuning for generAl-purpose vision-Language models, namely PETAL. PETAL enhances the semantic depth of instructions in two innovative ways: **1) by introducing adaptive instruction mixture-of-experts (MOEs) **, and **2) by fortifying the score-based linkage between parameterefficient tuning and mutual information**.
+We propose a novel approach to utilize Parameter-Efficient Tuning for generAl-purpose vision-Language models, namely PETAL. PETAL enhances the semantic depth of instructions in two innovative ways: **1) by introducing adaptive instruction mixture-of-experts (MOEs)**, and **2) by fortifying the score-based linkage between parameterefficient tuning and mutual information**.
 
 The whole architecture of our PETAL:
 
-<a href="url"><img src="https://github.com/melonking32/PETAL/blob/main/assets/main.png" align="center" width="700" ></a>
+<a href="url"><img src="https://github.com/melonking32/PETAL/blob/main/assets/main.png" align="center" width="800" ></a>
 
 Case study and the visualization output:
 
-<a href="url"><img src="https://github.com/melonking32/PETAL/blob/main/assets/Case1.jpg" align="center" width="700" ></a>
+<a href="url"><img src="https://github.com/melonking32/PETAL/blob/main/assets/Case1.jpg" align="center" width="800" ></a>
 
 
 ## Installation
