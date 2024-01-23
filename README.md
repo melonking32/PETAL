@@ -1,6 +1,6 @@
-# Parameter-efficient Instruction-enhanced Learning
+# 🌺 When Parameter-efficient Tuning Meets General-purpose Vision-language Models
 
-[Paper](https://arxiv.org/abs/2312.12458) | [arXiv](https://arxiv.org/abs/2312.12458) 
+[[Paper](https://arxiv.org/abs/2312.12458)] | [[arXiv](https://arxiv.org/abs/2312.12458)] 
 
 We propose a novel approach to utilize Parameter-Efficient Tuning for generAl-purpose vision-Language models, namely PETAL. PETAL enhances the semantic depth of instructions in two innovative ways: **1) by introducing adaptive instruction mixture-of-experts (MOEs)**, and **2) by fortifying the score-based linkage between parameterefficient tuning and mutual information**.
 
