@@ -6,11 +6,11 @@ We propose a novel approach to utilize Parameter-Efficient Tuning for generAl-pu
 
 The whole architecture of our PETAL:
 
-<a href="url"><img src="https://github.com/melonking32/PETAL/tree/main/assets/main.pdf" align="center" width="700" ></a>
+<a href="url"><img src="https://github.com/melonking32/PETAL/blob/main/assets/main.pdf" align="center" width="700" ></a>
 
 Case study and the visualization output:
 
-<a href="url"><img src="https://github.com/melonking32/PETAL/tree/main/assets/Case1.jpg" align="center" width="700" ></a>
+<a href="url"><img src="https://github.com/melonking32/PETAL/blob/main/assets/Case1.jpg" align="center" width="700" ></a>
 
 
 ## Installation
